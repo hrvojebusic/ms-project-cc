@@ -4,3 +4,7 @@ appengine-generated/
 data/*
 results/*
 test/*
+
+.DS_Store
+**data/
+**results/
