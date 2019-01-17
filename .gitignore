@@ -1,10 +1,15 @@
 # Google App Engine generated folder
 appengine-generated/
 *.pyc
-data/*
-results/*
-test/*
 
-.DS_Store
+data/*
 **data/
+
+results/*
 **results/
+
+test/*
+**test/
+
+# Mac
+.DS_Store
