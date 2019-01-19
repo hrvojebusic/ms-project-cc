@@ -29,7 +29,7 @@ class VGG(nn.Module):
         x = x.view(x.size(0), -1)
         x = self.fst_classifier(x)
         self.cl_features = x
-        x = self.snd_classifier(x)
+        x = self.snd_classifier(self.cl_features)
         return x
 
     def _initialize_weights(self):

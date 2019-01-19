@@ -81,7 +81,8 @@ fixed_noise = Variable(fixed_noise)
 
 # Center loss addition
 if args.centerloss:
-    classes,dim=10,2
+    classes = 10 # default for CIFAR & SVHN
+    dim = 2
     centerloss = CenterLoss(num_classes=classes, feat_dim=dim, use_gpu=args.cuda)
     print('Center loss component | Classes: {} | Features: {} | GPU: {}'.format(classes,dim,args.cuda))
 
