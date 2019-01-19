@@ -157,7 +157,10 @@ def train(epoch):
         # cross entropy loss
         optimizer.zero_grad()
         output = F.log_softmax(model(data))
-        c_loss = centerloss(model.cl_features, target) * 0.25
+        if args.centerloss:
+            c_loss = centerloss(model.cl_features, target) * 0.25
+        else:
+            c_loss = 0
         loss = F.nll_loss(output, target)
 
         # KL divergence
