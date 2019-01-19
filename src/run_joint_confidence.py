@@ -82,7 +82,7 @@ fixed_noise = Variable(fixed_noise)
 # Center loss addition
 if args.centerloss:
     classes = 10 # default for CIFAR & SVHN
-    dim = 2
+    dim = 512
     centerloss = CenterLoss(num_classes=classes, feat_dim=dim, use_gpu=args.cuda)
     print('Center loss component | Classes: {} | Features: {} | GPU: {}'.format(classes,dim,args.cuda))
 
@@ -159,7 +159,7 @@ def train(epoch):
         optimizer.zero_grad()
         output = F.log_softmax(model(data))
         if args.centerloss:
-            c_loss = centerloss(model.cl_features, target) * 0.25
+            c_loss = centerloss(model.cl_features, target) * 0.05
         else:
             c_loss = 0
         loss = F.nll_loss(output, target)
