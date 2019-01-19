@@ -17,6 +17,7 @@ import models
 from torchvision import datasets, transforms
 from torch.autograd import Variable
 
+from center_loss import CenterLoss
 
 # Training settings
 parser = argparse.ArgumentParser(description='Training code - joint confidence')
@@ -35,6 +36,7 @@ parser.add_argument('--droprate', type=float, default=0.1, help='learning rate d
 parser.add_argument('--decreasing_lr', default='60', help='decreasing strategy')
 parser.add_argument('--num_classes', type=int, default=10, help='the # of classes')
 parser.add_argument('--beta', type=float, default=1, help='penalty parameter for KL term')
+parser.add_argument('--centerloss', type=bool, default=False, help='add center loss component')
 
 args = parser.parse_args()
 
@@ -77,8 +79,18 @@ if args.cuda:
     fixed_noise = fixed_noise.cuda()
 fixed_noise = Variable(fixed_noise)
 
+# Center loss addition
+if args.centerloss:
+    classes,dim=10,2
+    centerloss = CenterLoss(num_classes=classes, feat_dim=dim, use_gpu=args.cuda)
+    print('Center loss component | Classes: {} | Features: {} | GPU: {}'.format(classes,dim,args.cuda))
+
 print('Setup optimizer')
-optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
+if args.centerloss:
+    params=list(model.parameters()) + list(centerloss.parameters())
+else:
+    params=model.parameters()
+optimizer = optim.Adam(params, lr=args.lr, weight_decay=args.wd)
 optimizerD = optim.Adam(netD.parameters(), lr=args.lr, betas=(0.5, 0.999))
 optimizerG = optim.Adam(netG.parameters(), lr=args.lr, betas=(0.5, 0.999))
 decreasing_lr = list(map(int, args.decreasing_lr.split(',')))
@@ -145,6 +157,7 @@ def train(epoch):
         # cross entropy loss
         optimizer.zero_grad()
         output = F.log_softmax(model(data))
+        c_loss = centerloss(model.cl_features, target) * 0.25
         loss = F.nll_loss(output, target)
 
         # KL divergence
@@ -155,7 +168,7 @@ def train(epoch):
         fake = netG(noise)
         KL_fake_output = F.log_softmax(model(fake))
         KL_loss_fake = F.kl_div(KL_fake_output, uniform_dist)*args.num_classes
-        total_loss = loss + args.beta*KL_loss_fake
+        total_loss = loss + c_loss + args.beta*KL_loss_fake
         total_loss.backward()
         optimizer.step()
 
