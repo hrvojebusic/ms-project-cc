@@ -18,6 +18,7 @@ import models
 from torchvision import datasets, transforms
 from torch.autograd import Variable
 
+from center_loss import CenterLoss
 
 # Training settings
 parser = argparse.ArgumentParser(description='Training code - cross entropy')
@@ -34,6 +35,7 @@ parser.add_argument('--outf', default='.', help='folder to output images and mod
 parser.add_argument('--wd', type=float, default=0.0, help='weight decay')
 parser.add_argument('--droprate', type=float, default=0.1, help='learning rate decay')
 parser.add_argument('--decreasing_lr', default='60', help='decreasing strategy')
+parser.add_argument('--centerloss', type=bool, default=False, help='add center loss component')
 
 args = parser.parse_args()
 print(args)
@@ -56,8 +58,19 @@ print(model)
 if args.cuda:
     model.cuda()
 
+# Center loss addition
+if args.centerloss:
+    classes = 10 # default for CIFAR & SVHN
+    dim = 10
+    centerloss = CenterLoss(num_classes=classes, feat_dim=dim, use_gpu=args.cuda)
+    print('Center loss component | Classes: {} | Features: {} | GPU: {}'.format(classes,dim,args.cuda))
+
 print('Setup optimizer')
-optimizer = optim.Adam(model.parameters(), lr=args.lr, weight_decay=args.wd)
+if args.centerloss:
+    params=list(model.parameters()) + list(centerloss.parameters())
+else:
+    params=model.parameters()
+optimizer = optim.Adam(params, lr=args.lr, weight_decay=args.wd)
 decreasing_lr = list(map(int, args.decreasing_lr.split(',')))
 
 def train(epoch):
@@ -68,7 +81,11 @@ def train(epoch):
         data, target = Variable(data), Variable(target)
         optimizer.zero_grad()
         output = F.log_softmax(model(data))
-        loss = F.nll_loss(output, target)
+        if args.centerloss:
+            c_loss = centerloss(model.cl_features, target) * 0.001
+        else:
+            c_loss = 0
+        loss = F.nll_loss(output, target) + c_loss
         loss.backward()
         optimizer.step()
         if batch_idx % args.log_interval == 0:
@@ -103,5 +120,5 @@ for epoch in range(1, args.epochs + 1):
     if epoch in decreasing_lr:
         optimizer.param_groups[0]['lr'] *= args.droprate
     test(epoch)
-    if epoch % 50 == 0:
+    if epoch % 10 == 0:
         torch.save(model.state_dict(), '%s/model_epoch_%d.pth' % (args.outf, epoch))
