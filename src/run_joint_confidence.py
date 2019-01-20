@@ -82,7 +82,7 @@ fixed_noise = Variable(fixed_noise)
 # Center loss addition
 if args.centerloss:
     classes = 10 # default for CIFAR & SVHN
-    dim = 512
+    dim = 10
     centerloss = CenterLoss(num_classes=classes, feat_dim=dim, use_gpu=args.cuda)
     print('Center loss component | Classes: {} | Features: {} | GPU: {}'.format(classes,dim,args.cuda))
 
@@ -159,7 +159,7 @@ def train(epoch):
         optimizer.zero_grad()
         output = F.log_softmax(model(data))
         if args.centerloss:
-            c_loss = centerloss(model.cl_features, target) * 0.05
+            c_loss = centerloss(model.cl_features, target) * 0.001
         else:
             c_loss = 0
         loss = F.nll_loss(output, target)
@@ -212,7 +212,7 @@ for epoch in range(1, args.epochs + 1):
         optimizerG.param_groups[0]['lr'] *= args.droprate
         optimizerD.param_groups[0]['lr'] *= args.droprate
         optimizer.param_groups[0]['lr'] *= args.droprate
-    if epoch % 20 == 0:
+    if epoch % 5 == 0:
         # do checkpointing
         torch.save(netG.state_dict(), '%s/netG_epoch_%d.pth' % (args.outf, epoch))
         torch.save(netD.state_dict(), '%s/netD_epoch_%d.pth' % (args.outf, epoch))
